@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="/index.css" />
+    </head>
+    <body>
+        <div id="player"></div>
+        <div id="toast">
+            <img id="toast-img" />
+            <div class="toast-text">
+                <div class="toast-small-text">
+                    <span id="toast-text-1"></span>
+                </div>
+                <div class="toast-main-text">
+                    <span id="toast-text-2"></span>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const onYouTubeVideoReady = new Event('youtube-ready');
+            const onYouTubeVideoEnded = new Event('youtube-ended');
+
+            var tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            var firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+            var player;
+            function onYouTubeIframeAPIReady() {
+                player = new YT.Player('player', {
+                    height: '100%',
+                    width: '100%',
+                    playerVars: {
+                        'autoplay': 1,
+                        'controls': 0
+                    },
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onStateChange': onPlayerStateChange
+                    }
+                });
+            }
+
+            function onPlayerReady(event) {
+                window.dispatchEvent(onYouTubeVideoReady);
+            }
+
+            function onPlayerStateChange(event) {
+                if (event.data == YT.PlayerState.ENDED) {
+                    window.dispatchEvent(onYouTubeVideoEnded);
+                }
+            }
+        </script>
+        <script src="./toast.js"></script>
+        <script src="https://cdn.socket.io/4.1.2/socket.io.min.js" integrity="sha384-toS6mmwu70G0fw54EGlWWeA4z3dyJ+dlXBtSURSKN4vyRFOcxd3Bzjj/AoOwY+Rg" crossorigin="anonymous"></script>
+        <script src="./queue.js"></script>
+    </body>
+</html>

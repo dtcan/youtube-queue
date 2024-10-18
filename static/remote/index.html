@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>
+            .queue-item {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                padding: 16px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            }
+
+            .queue-item-text {
+                margin-left: 16px;
+                margin-right: 16px;
+                flex-grow: 1;
+            }
+
+            .queue-item-channel {
+                font-size: small;
+            }
+
+            .queue-item-delete {
+                font-size: large;
+            }
+
+            .add-video, .add-video>button {
+                text-align: center;
+                font-size: x-large;
+            }
+        </style>
+    </head>
+    <body>
+        <div style="display: none;" id="content">
+            <div class="add-video"><button onclick="play()">Play</button></div>
+            <div class="add-video"><button onclick="pause()">Pause</button></div>
+            <div class="add-video"><button onclick="addItem()">Add Video</button></div>
+            <div id="queue"></div>
+        </div>
+        <script src="https://cdn.socket.io/4.1.2/socket.io.min.js" integrity="sha384-toS6mmwu70G0fw54EGlWWeA4z3dyJ+dlXBtSURSKN4vyRFOcxd3Bzjj/AoOwY+Rg" crossorigin="anonymous"></script>
+        <script>
+            window.onload = async () => {
+                const response = await fetch('/api/queue');
+                const data = await response.json();
+                buildQueue(data);
+
+                name = prompt("Enter your name", "Someone") || "Someone";
+                const contentElement = document.getElementById('content');
+                contentElement.style.display = 'unset';
+            }
+
+            async function play() {
+                socket.emit("play");
+            }
+
+            async function pause() {
+                socket.emit("pause");
+            }
+
+            async function addItem() {
+                let urlString = prompt("Enter video URL");
+                if (urlString) {
+                    let url = new URL(urlString);
+                    let id = url.searchParams.get('v');
+                    if (!id) {
+                        let slash = urlString.lastIndexOf('/');
+                        if (slash > 0) {
+                            id = urlString.substring(slash + 1);
+                        }
+                    }
+
+                    if (id) {
+                        await fetch(`/api/queue/add/${id}?who=${name}`, {
+                            method: 'POST'
+                        });
+                    }
+                }
+            }
+
+            async function removeItem(index) {
+                await fetch(`/api/queue/remove/${index}?who=${name}`, {
+                    method: 'DELETE'
+                });
+            }
+
+            async function buildQueue(queue) {
+                const queueElement = document.getElementById('queue');
+                queueElement.innerHTML = "";
+
+                for (let i = 0; i < queue.length; i++) {
+                    const queueItemId = queue[i];
+                    const response = await fetch(`/api/video/${queueItemId}`);
+                    const data = await response.json();
+
+                    let thumbnailElement = document.createElement("img");
+                    thumbnailElement.src = data.thumbnailURL;
+                    thumbnailElement.width = "128px";
+                    let itemElement = document.createElement("div");
+                    itemElement.className = "queue-item";
+                    let textElement = document.createElement("div");
+                    textElement.className = "queue-item-text";
+                    let titleElement = document.createElement("div");
+                    titleElement.className = "queue-item-title";
+                    titleElement.innerText = data.title;
+                    let channelElement = document.createElement("div");
+                    channelElement.className = "queue-item-channel";
+                    channelElement.innerText = data.channelTitle;
+                    let deleteElement = document.createElement("button");
+                    deleteElement.className = "queue-item-delete";
+                    deleteElement.innerText = "X";
+                    deleteElement.onclick = () => { removeItem(i) }
+
+                    textElement.appendChild(titleElement);
+                    textElement.appendChild(channelElement);
+                    itemElement.appendChild(thumbnailElement);
+                    itemElement.appendChild(textElement);
+                    itemElement.appendChild(deleteElement);
+                    queueElement.appendChild(itemElement);
+                }
+            }
+
+            const socket = io({ auth: { token: "remote" } });
+
+            socket.on('add', async (who, id, index, queue) => {
+                buildQueue(queue);
+            });
+
+            socket.on('remove', async (who, id, index, queue) => {
+                buildQueue(queue);
+            });
+        </script>
+    </body>
+</html>
